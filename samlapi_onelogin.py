@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import sys
 import os
@@ -10,6 +10,8 @@ import base64
 import logging
 import xml.etree.ElementTree as ET
 import re
+from Queue import Queue
+from threading import Thread
 from bs4 import BeautifulSoup
 from os.path import expanduser
 from urlparse import urlparse, urlunparse
@@ -130,13 +132,41 @@ for awsrole in awsroles:
         awsroles.insert(index, newawsrole)
         awsroles.remove(awsrole)
 
+def get_account_aliases(role_arn, principal_arn, saml, q):
+    sess = boto3.session.Session()
+    stsclient = sess.client('sts')
+    token = stsclient.assume_role_with_saml(RoleArn=role_arn, PrincipalArn=principal_arn, SAMLAssertion=saml, DurationSeconds=900)
+    creds = token['Credentials']
+    aws_key = creds['AccessKeyId']
+    aws_sec = creds['SecretAccessKey']
+    aws_tok = creds['SessionToken']
+    aws_exp = creds['Expiration']
+
+    iamclient = sess.client('iam', aws_access_key_id=aws_key, aws_secret_access_key=aws_sec, aws_session_token=aws_tok)
+    q.put({role_arn: iamclient.list_account_aliases()['AccountAliases'][0]})
+
 # If there's more than one role, ask the user to pick one; otherwise proceed
 if len(awsroles) > 1:
-    i = 0
+    thread_pool = []
+    q = Queue()
     print "Please choose the role you would like to assume:"
     for awsrole in awsroles:
-        print ' [', i, ']: ', awsrole.split(',')[0]
-        i += 1
+        role_arn, principal_arn = awsrole.split(',')
+        cur_thread = Thread(target=get_account_aliases, args=(role_arn, principal_arn, saml, q))
+        thread_pool.append(cur_thread)
+        cur_thread.start()
+    for t in thread_pool:
+        t.join()
+    mapped_roles = {}
+    while not q.empty():
+        mapped_roles.update(q.get())
+        q.task_done()
+
+    # iterate the original list to maintain the order of the old behavior
+    for i in xrange(len(awsroles)):
+        role_arn = awsroles[i].split(',')[0]
+        print '[ {} ]:  {}  {}'.format(i, role_arn, mapped_roles[role_arn])
+
     print "Selection: ",
     selectedroleindex = raw_input()
 
