@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import sys
 import os
@@ -18,6 +18,7 @@ from onelogin.api.client import OneLoginClient
 
 ##########################################################################
 # Variables
+ConfigParser.DEFAULTSECT = 'default'
 Config = ConfigParser.ConfigParser()
 Config.read(os.path.join(os.path.abspath(os.path.dirname(__file__)),'settings.ini'))
 
@@ -60,6 +61,13 @@ durationseconds = int(Config.get('Settings', 'DurationSeconds')) if Config.has_o
 
 # False should only be used for dev/test
 sslverification = True
+
+# Account Name and ID details loaded from setting file
+accountDict = {}
+accountDetails= Config.get('Settings', 'AccountNameId').split(",")
+for accountDetail in accountDetails:
+ accountDict[accountDetail.split("::")[1]] = accountDetail.split("::")[0]
+
 
 # Uncomment to enable low level debugging
 # logging.basicConfig(level=logging.DEBUG)
@@ -132,8 +140,14 @@ if len(awsroles) > 1:
     i = 0
     print "Please choose the role you would like to assume:"
     for awsrole in awsroles:
+<<<<<<< HEAD
         accountId=awsrole.split(',')[0].split('/')[0].split(':role')[0].split('arn:aws:iam::')[1]
         print ' [' + str(i) + ']:\t', accountDict.get(accountId) + '\t' + awsrole.split(',')[0]
+=======
+        role = awsrole.split(',')[0].split('/')[1]
+        accountId=awsrole.split(',')[0].split('/')[0].split(':role')[0].split('arn:aws:iam::')[1]
+        print ' [{}]: {} {} ({})'.format(i, accountId, accountDict.get(accountId), role)
+>>>>>>> origin
         i += 1
     print "Selection: ",
     selectedroleindex = raw_input()
@@ -178,6 +192,20 @@ config.set('saml', 'aws_session_token', aws_tok)
 
 # boto is special, see https://github.com/boto/boto/issues/2988
 config.set('saml', 'aws_security_token', aws_tok)
+
+# Put the creds into the default profile
+if not config.defaults():
+    config.set(ConfigParser.DEFAULTSECT, 'defaults_script', 'samlapi_onelogin.py')
+
+if config.defaults()['defaults_script'] == 'samlapi_onelogin.py':
+    config.set(ConfigParser.DEFAULTSECT, 'output', outputformat)
+    config.set(ConfigParser.DEFAULTSECT, 'region', region)
+    config.set(ConfigParser.DEFAULTSECT, 'aws_access_key_id', aws_key)
+    config.set(ConfigParser.DEFAULTSECT, 'aws_secret_access_key', aws_sec)
+    config.set(ConfigParser.DEFAULTSECT, 'aws_session_token', aws_tok)
+
+    # boto is special, see https://github.com/boto/boto/issues/2988
+    config.set(ConfigParser.DEFAULTSECT, 'aws_security_token', aws_tok)
 
 # Write the updated config file
 with open(filename, 'w+') as configfile:
