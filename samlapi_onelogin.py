@@ -51,10 +51,10 @@ awsconfigfile = Config.get('Settings', 'awsconfigfile')
 email = Config.get('Settings', 'Email') if Config.has_option('Settings', 'Email') else None
 
 # Account Name and ID details loaded from setting file
-accountDict = {}
-accountDetails= Config.get('Settings', 'AccountNameId').split(",")
-for accountDetail in accountDetails:
- accountDict[accountDetail.split("::")[1]] = accountDetail.split("::")[0]
+account_dict = {}
+account_details= Config.get('Settings', 'AccountNameId').split(",")
+for account_detail in account_details:
+ account_dict[account_detail.split("::")[1]] = account_detail.split("::")[0]
 
 # The duration, in seconds, of the role session
 durationseconds = int(Config.get('Settings', 'DurationSeconds')) if Config.has_option('Settings', 'DurationSeconds') and Config.get('Settings', 'DurationSeconds').isdigit() else 3600
@@ -140,8 +140,8 @@ if len(awsroles) > 1:
     i = 0
     print "Please choose the role you would like to assume:"
     for awsrole in awsroles:
-        accountId=awsrole.split(',')[0].split('/')[0].split(':role')[0].split('arn:aws:iam::')[1]
-        print ' [' + str(i) + ']:\t', accountDict.get(accountId) + '\t' + awsrole.split(',')[0]
+        account_id=awsrole.split(',')[0].split('/')[0].split(':role')[0].split('arn:aws:iam::')[1]
+        print ' [{}]:\t{}\t{}'.format(i, account_dict.get(account_id), awsrole.split(',')[0])
         i += 1
     print "Selection: ",
     selectedroleindex = raw_input()
@@ -174,32 +174,14 @@ filename = home + awsconfigfile
 config = ConfigParser.RawConfigParser()
 config.read(filename)
 
-# Put the creds into a saml-specific profile instead of clobbering other creds
-if not config.has_section('saml'):
-    config.add_section('saml')
-
-config.set('saml', 'output', outputformat)
-config.set('saml', 'region', region)
-config.set('saml', 'aws_access_key_id', aws_key)
-config.set('saml', 'aws_secret_access_key', aws_sec)
-config.set('saml', 'aws_session_token', aws_tok)
+config.set('default', 'output', outputformat)
+config.set('default', 'region', region)
+config.set('default', 'aws_access_key_id', aws_key)
+config.set('default', 'aws_secret_access_key', aws_sec)
+config.set('default', 'aws_session_token', aws_tok)
 
 # boto is special, see https://github.com/boto/boto/issues/2988
-config.set('saml', 'aws_security_token', aws_tok)
-
-# Put the creds into the default profile
-if not config.defaults():
-    config.set(ConfigParser.DEFAULTSECT, 'defaults_script', 'samlapi_onelogin.py')
-
-if config.defaults()['defaults_script'] == 'samlapi_onelogin.py':
-    config.set(ConfigParser.DEFAULTSECT, 'output', outputformat)
-    config.set(ConfigParser.DEFAULTSECT, 'region', region)
-    config.set(ConfigParser.DEFAULTSECT, 'aws_access_key_id', aws_key)
-    config.set(ConfigParser.DEFAULTSECT, 'aws_secret_access_key', aws_sec)
-    config.set(ConfigParser.DEFAULTSECT, 'aws_session_token', aws_tok)
-
-    # boto is special, see https://github.com/boto/boto/issues/2988
-    config.set(ConfigParser.DEFAULTSECT, 'aws_security_token', aws_tok)
+config.set('default', 'aws_security_token', aws_tok)
 
 # Write the updated config file
 with open(filename, 'w+') as configfile:
@@ -211,5 +193,5 @@ print 'Your new access key pair has been stored in the AWS configuration file:'
 print '    {0} (under the saml profile).'.format(filename)
 print 'Note that it will expire at {0}.'.format(aws_exp)
 print 'To use this credential, call the AWS CLI with the --profile option'
-print '    (e.g. aws --profile saml ec2 describe-instances).'
+print '    (e.g. aws ec2 describe-instances).'
 print '-------------------------------------------------------------------\n\n'
