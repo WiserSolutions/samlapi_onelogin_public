@@ -140,14 +140,8 @@ if len(awsroles) > 1:
     i = 0
     print "Please choose the role you would like to assume:"
     for awsrole in awsroles:
-<<<<<<< HEAD
         accountId=awsrole.split(',')[0].split('/')[0].split(':role')[0].split('arn:aws:iam::')[1]
         print ' [' + str(i) + ']:\t', accountDict.get(accountId) + '\t' + awsrole.split(',')[0]
-=======
-        role = awsrole.split(',')[0].split('/')[1]
-        accountId=awsrole.split(',')[0].split('/')[0].split(':role')[0].split('arn:aws:iam::')[1]
-        print ' [{}]: {} {} ({})'.format(i, accountId, accountDict.get(accountId), role)
->>>>>>> origin
         i += 1
     print "Selection: ",
     selectedroleindex = raw_input()
